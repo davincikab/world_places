@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Document</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+
+   <style>
+       body {
+           padding: 0;
+           margin: 0;
+       }
+
+       .map-container {
+           position: relative;
+           width: 100vw;
+           height: 100vh;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+       }
+
+       .inner-container {
+           position: relative;
+       }
+
+       #map {
+           width: 400px;
+           height: 327px;
+           z-index: 0;
+       }
+
+       .overview-map {
+           position:absolute;
+           top:0%;
+           right:0%;
+           padding: 5px;
+           box-shadow: inset 0px 10px 0.3em rgb(54, 54, 54);
+           border: 1px solid #ccc;
+           overflow: hidden;
+       }
+
+       #overview-map {
+           height: 120px;
+           width:100px;
+           z-index: 1;
+       }
+
+       #map_loc_label {
+            position:absolute;
+            bottom:10px;
+            left:0px;
+            right: 0;
+            text-align:center;
+            z-index:4;
+            background-color:rgba(2,2,2,0.4);
+            padding:20px;
+            border-radius:5px;
+        }
+
+        .cmarker {
+            background-color: #F00;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .lmarker {
+            cursor: pointer;
+            font-size:28px;
+            text-align:center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lmarker a{
+            color: #FFF;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            text-decoration:none;
+            text-align:center;
+            display:inline-block;
+        }
+
+        .lmarker .pl_main{
+            font-family: 'Inter', sans-serif;
+            font-weight:700;
+            font-size:20px;
+            line-height:0px;
+        }
+
+        .lmarker .pl_main_sub{
+            font-size:11.6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            line-height:0px;
+        }
+
+        .lmarker .pl_main_sub2{
+            font-size:8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            line-height:0px;
+            margin-top:24px;
+        }
+
+        .lmarker .pl_main_ln{
+            background-color:#FFF;
+            height:2px;
+            width:50px;
+            display:inline-block;
+            margin:5px;
+        }
+   </style>
+</head>
+<body>
+
+    <div class="map-container">
+        <div class="inner-container" id="inner-container">
+            <div id="map"></div>
+            <div class="overview-map">
+                <div id="overview-map"></div>
+            </div>
+           
+            <div id="map_loc_label"></div>
+        </div>
+    </div>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+
+    <script>
+        var map = L.map('map', {
+            zoomControl:false,
+            attributionControl:false
+        }).setView([38.893370983299945, -77.03561782836915], 10);
+
+        var overviewMap = L.map('overview-map', {
+            interactive:false,
+            zoomControl:false,
+            attributionControl:false
+        }).setView([38.893370983299945, -77.03561782836915], 5);
+
+        // add umap tile layer
+        L.tileLayer('http://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            // attribution: 'map data \u00a9 [[https://osm.org/copyright|OpenStreetMap contributors]] under ODbL  - Tiles \u00a9 HOT',
+            maxZoom: 18,
+        }).addTo(map);
+
+        L.tileLayer('http://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            maxZoom:18
+        }).addTo(overviewMap);
+
+        // marker
+        var divIcon = L.divIcon({
+            className:'cmarker'
+        });
+
+        var cmarker = L.marker(map.getCenter(), {icon:divIcon});
+        cmarker.addTo(overviewMap);
+
+        // bounding box
+        function getPolygonCoordsFromBounds(bounds) {
+
+            let coordinates = [
+                Object.values(bounds.getNorthWest()),
+                Object.values(bounds.getNorthEast()),
+                Object.values(bounds.getSouthEast()),
+                Object.values(bounds.getSouthWest())
+            ];
+
+            return coordinates;
+        }
+
+        let latlngs = getPolygonCoordsFromBounds(map.getBounds());
+        var boundsPolygon = L.polygon(latlngs, {
+            color:'#ce4de2',
+            fillOpacity:0.6,
+            stroke:'#ce4de2',
+            opacity:1,
+            dashArray:[2,5]
+        }).addTo(overviewMap);
+
+
+        // printing the map container
+        map.on("click", function(e) {
+            console.log("Map load event");
+        });
+
+        function createPicture() {
+            html2canvas(document.querySelector("#inner-container"), {
+                useCORS:true,
+                height:327,
+                width:400
+            }).then(canvas => {
+                document.body.appendChild(canvas);
+                console.log(canvas);
+
+                // convert canvas to an image
+                var data = canvas.toDataURL('image/png');
+                var image = new Image();
+                image.src = data;
+
+                // console.log(data);
+                var file= dataURLtoBlob(data);
+                console.log(file);
+
+                commitImage(file);
+            });
+        }
+
+        function commitImage(image) {
+            // create a formdata instance
+            var fd = new FormData();
+
+            //    add entries
+            fd.append('file', image);
+            fd.append('address', 'Washington, District of Columbia');
+
+            console.log(fd.get('file'));
+
+            fetch("/image", {
+                method:'POST',
+                body:fd,
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data);
+            })
+           .catch(err => console.error)
+        }
+
+        function dataURLtoBlob(dataURI) {
+            // convert base64 to raw binary data held in a string
+            // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+            var byteString = atob(dataURI.split(',')[1]);
+
+            // separate out the mime component
+            var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+
+            // write the bytes of the string to an ArrayBuffer
+            var ab = new ArrayBuffer(byteString.length);
+
+            // create a view into the buffer
+            var ia = new Uint8Array(ab);
+
+            // set the bytes of the buffer to the correct values
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+
+            // write the ArrayBuffer to a blob, and you're done
+            var blob = new Blob([ab], {type: mimeString});
+            return blob;
+        }
+
+        function updateLocationLabel({place_name, more_loc, last_name_lv}) {
+            var elm = document.createElement('div');
+            elm.className = 'lmarker';
+            var content;
+        
+            if(last_name_lv) {
+                content = '<a href="#"><div><div class="pl_main">' + place_name + '</div>'+ more_loc +'<div class="pl_main_ln"></div><div class="pl_main_sub">' + last_name_lv + '</div></div></a>'; 
+            } else {
+                content = '<a href="#"><div><div class="pl_main">' + place_name + '</div>'+ more_loc +'</div></a>'; 
+            }
+
+            elm.innerHTML = content;
+
+            document.getElementById('map_loc_label').innerHTML = '';
+            document.getElementById('map_loc_label').appendChild(elm);
+        }
+
+        updateLocationLabel({
+            place_name:'Washington',
+            more_loc:'',
+            last_name_lv:'District of Columbia'
+        });
+
+        // fetch data
+        fetch("/static/geojson/countries.geojson")
+        .then(res => res.json())
+        .then(response => {
+            // iterateData(response);
+        })
+        .catch(err => console.error);
+
+
+        function iterateData(data) {
+            let i = 0;
+
+            console.log(data);
+            function updateMapState(i) {
+                let country = data.features[i];
+                console.log(country);
+                console.log({lat:country.properties.Lat, lng:country.properties.Lon});
+
+                // center the map
+                let mapCenter = {lat:country.properties.Lat, lng:country.properties.Lon};
+                map.flyTo(mapCenter);
+
+                // create polygon
+                let coords = country.properties.Polygon;
+                let match = coords.match(/(\[(-|)\d+.\d+,\s(-|)\d+.\d+\])/g);
+                console.log(match);
+
+                coords = match.map(entry => {
+                    return JSON.parse(entry);
+                });
+
+                // create 
+                coords = [[[ ...coords ]]];
+                console.log(coords);
+
+                // console.log(coords);
+                let polygon = L.polygon(coords);
+
+                // get bounds
+                let bounds = polygon.getBounds();
+
+                console.log(polygon.getBounds());
+                // update map bounds
+                map.fitBounds(bounds);
+
+                // update the location label
+                updateLocationLabel({
+                    place_name:country.properties.Country,
+                    more_loc:'',
+                    last_name_lv:country.properties.Continent,
+                });
+
+                console.log("bounds");
+
+                map.once("moveend", function(e) {
+                    i++;
+
+                    setTimeout(function(e) {
+                        if(i > data.features.length) {
+                        return;
+                        } else {
+                            return updateMapState(i);
+                        }
+                    }, 8000);
+                   
+                    overviewMap.flyTo(mapCenter, 3);
+                    cmarker.setLatLng(mapCenter);
+                });
+
+            };
+
+            updateMapState(i);
+        }
+    </script>
+</body>
+</html>
